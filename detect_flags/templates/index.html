@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link
+         href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
+         rel="stylesheet"
+      />
+      <link
+         rel="stylesheet"
+         type="text/css"
+         href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css"
+      />
+
+      <title>Detect Flags</title>
+      <style>
+         *,
+         *::before,
+         *::after {
+            box-sizing: border-box;
+            margin: 0;
+         }
+
+         body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            overflow-x: hidden;
+         }
+
+         .container {
+            max-width: 1236px;
+            width: 100%;
+            padding: 0 1rem;
+            margin: 0 auto;
+         }
+
+         .button {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 16px;
+            letter-spacing: 2px;
+            text-decoration: none;
+            text-transform: uppercase;
+            color: #000;
+            cursor: pointer;
+            border: 3px solid;
+            padding: 0.25em 0.5em;
+            box-shadow: 1px 1px 0px 0px, 2px 2px 0px 0px, 3px 3px 0px 0px,
+               4px 4px 0px 0px, 5px 5px 0px 0px;
+            position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+         }
+
+         .button:active {
+            box-shadow: 0px 0px 0px 0px;
+            top: 5px;
+            left: 5px;
+         }
+
+         .form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+         }
+
+         .title {
+            font-size: 3rem;
+            text-align: center;
+         }
+
+         .description {
+            font-size: 1rem;
+            text-align: center;
+         }
+
+         input[type='file'] {
+            display: none;
+         }
+
+         #image-section {
+            max-width: 450px;
+            width: 100%;
+            margin: 0 auto;
+         }
+
+         #image-section img,
+         #image-section video {
+            width: 100%;
+            height: auto;
+         }
+
+         .main {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 1rem;
+         }
+
+         .loader-spin {
+            animation: spin 1s linear infinite;
+            display: none;
+         }
+
+         .loader-spin.show {
+            display: inline-block;
+         }
+
+         @keyframes spin {
+            to {
+               transform: rotate(360deg);
+            }
+         }
+      </style>
+   </head>
+   <body>
+      <div class="container">
+         <div class="main">
+            <h1 class="title">Detect Flags</h1>
+            <p class="description">
+               This is a simple web application that detects the country flag
+               based on the image or video uploaded.
+            </p>
+            <div id="image-section">
+               <!-- To render image -->
+            </div>
+            <form class="form">
+               <input
+                  type="file"
+                  name="file"
+                  id="file"
+                  accept="image/png, image/jpg,video/*"
+               />
+               <button type="button" class="button button-choose">
+                  Choose Image or Video
+               </button>
+            </form>
+            <button type="button" class="button button-submit">
+               <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="lucide lucide-loader loader-spin"
+               >
+                  <path d="M12 2v4" />
+                  <path d="m16.2 7.8 2.9-2.9" />
+                  <path d="M18 12h4" />
+                  <path d="m16.2 16.2 2.9 2.9" />
+                  <path d="M12 18v4" />
+                  <path d="m4.9 19.1 2.9-2.9" />
+                  <path d="M2 12h4" />
+                  <path d="m4.9 4.9 2.9 2.9" />
+               </svg>
+               <span> Detect Flag </span>
+            </button>
+         </div>
+      </div>
+   </body>
+
+   <script>
+      const fileInput = document.getElementById('file');
+      const button = document.querySelector('.button-choose');
+      const imageSection = document.getElementById('image-section');
+      const buttonSubmit = document.querySelector('.button-submit');
+      const loaderSubmit = document.querySelector('.loader-spin');
+      let file = null;
+
+      button.addEventListener('click', () => {
+         fileInput.click();
+      });
+
+      fileInput.addEventListener('change', (e) => {
+         file = e.target.files[0];
+
+         if (!file) return;
+
+         if (file.type.includes('video')) {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            video.style.width = '100%';
+            video.style.height = 'auto';
+            video.autoplay = true;
+            video.controls = true;
+            video.muted = true;
+
+            imageSection.innerHTML = '';
+            imageSection.appendChild(video);
+            return;
+         }
+
+         const reader = new FileReader();
+
+         reader.onload = (e) => {
+            const data = e.target.result;
+            const image = document.createElement('img');
+            image.src = data;
+            image.style.width = '100%';
+            image.style.height = 'auto';
+
+            imageSection.innerHTML = '';
+            imageSection.appendChild(image);
+         };
+
+         reader.readAsDataURL(file);
+      });
+
+      buttonSubmit.addEventListener('click', async () => {
+         if (!file) {
+            Toastify({
+               text: 'Please choose an image or video',
+               duration: 3000,
+               close: true,
+               gravity: 'top',
+               position: 'center',
+               backgroundColor: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+            }).showToast();
+            return;
+         }
+
+         const formData = new FormData();
+         formData.append('file', file);
+
+         loaderSubmit.classList.add('show');
+         buttonSubmit.disabled = true;
+
+         await new Promise((resolve) => setTimeout(resolve, 1000));
+
+         const response = await fetch('/detect-flags/', {
+            method: 'POST',
+            body: formData,
+         });
+
+         const data = await response.json();
+
+         loaderSubmit.classList.remove('show');
+         buttonSubmit.disabled = false;
+
+         if (response.status === 200) {
+            Toastify({
+               text: `The flag detected is Viet Nam`,
+               duration: 3000,
+               close: true,
+               gravity: 'top',
+               position: 'center',
+               backgroundColor: 'linear-gradient(to right, #00b09b, #96c93d)',
+            }).showToast();
+         } else {
+            Toastify({
+               text: data.message,
+               duration: 3000,
+               close: true,
+               gravity: 'top',
+               position: 'center',
+               backgroundColor: 'linear-gradient(to right, #ff416c, #ff4b2b)',
+            }).showToast();
+         }
+      });
+   </script>
+   <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/toastify-js"
+   ></script>
+</html>
