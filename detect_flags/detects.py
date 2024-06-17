@@ -1,73 +1,57 @@
-import cv2
-import numpy as np
-from tensorflow.keras.models import load_model
 import base64
 import os
+import asyncio
+from ultralytics import YOLO
+import subprocess
+from moviepy.editor import VideoFileClip
 
-def get_image_file_type(image_path):
-    _, file_extension = os.path.splitext(image_path)
-    return file_extension.lower() 
+def image_to_base64(image_path):
+    with open(image_path, "rb") as img_file:
+        encoded_string = base64.b64encode(img_file.read())
+        base64_string = encoded_string.decode('utf-8')
+        return f'data:image/{get_file_type(image_path)};base64,{base64_string}'
 
-def preprocess_image(image_path):
-    img = cv2.imread(image_path)
+def video_to_base64(video_path):
+    with open(video_path, "rb") as video_file:
+        encoded_string = base64.b64encode(video_file.read())
+        base64_string = encoded_string.decode('utf-8')
+        return f'data:video/{get_file_type(video_path)};base64,{base64_string}'
 
-    if img is None:
-       return None
-   
-    img = cv2.resize(img, (200, 200)) 
+def get_file_type(file_path):
+    _, file_extension = os.path.splitext(file_path)
+    return file_extension.lower().strip('.')
 
-    img = np.array(img) / 255.0
-
-    img = np.expand_dims(img, axis=0)
-   
-
-    return img
-
-def detect_flag(image_path):
-
-    model = load_model('model.keras')
-    class_names = ['VietNam', 'USA']
-
-    img = preprocess_image(image_path)
-
-    if img is None:
-       return None
-
-
-    predictions = model.predict(img)[0]
-
-    detected_flags = []
-
-    if(predictions is None):
-        return None
-
-    for i, score in enumerate(predictions):
-        if score > 0.5:
-            class_label = class_names[i]
-
-            detected_flags.append({
-                'class_label': class_label,
-                'score': float(score)
-            })
-
-    for flag in detected_flags:
-        label = flag['class_label']
-        score = flag['score']
-
-        cv2.rectangle(img, (0,0), (200,200), (0,255,0), 2)
-        cv2.putText(img, f'{label} ({score:.2f})', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
-
+async def detect_objects(file_path):
+    file_type = get_file_type(file_path)
     
+    if file_type not in ['jpg', 'jpeg', 'png', 'mp4', 'avi', 'mov','webp']:
+        raise ValueError('Invalid file type. Supported file types are jpg, jpeg, png, mp4, avi, mov')
+    
+    model = YOLO("E:/detect_flags/runs/detect/train14/weights/best.pt")
 
-    print(detected_flags)
+    if file_type in ['jpg', 'jpeg', 'png']:
+        results = await asyncio.to_thread(model.predict, file_path, save=True, conf=0.5 )
+
+        print(results)
+
+        img_path = results[0].save_dir + '\\' + results[0].path.replace('E:\\detect_flags\\media\\', '') 
+
+        print(img_path)
+
+        return image_to_base64(img_path)
+    
+    if file_type in ['mp4', 'avi', 'mov']:
+        results = await asyncio.to_thread(model.predict, file_path, save=True, conf=0.5, )
 
 
-    file_extension = get_image_file_type(image_path)
-    _, buffer = cv2.imencode(file_extension, img)
-    img_base64 = base64.b64encode(buffer).decode()
+        file_name = os.path.basename(file_path)
 
-    return img_base64
+        input_path = results[0].save_dir + '\\' + file_name.replace('mp4', 'avi')
 
+        output_path = results[0].save_dir + '\\' + file_name
 
-   
+        clip = VideoFileClip(input_path)
 
+        clip.write_videofile(output_path, codec='libx264')
+
+        return video_to_base64(output_path)
